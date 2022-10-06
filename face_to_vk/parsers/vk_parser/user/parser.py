@@ -1,4 +1,5 @@
 import time
+import datetime
 from typing import Union, Optional
 
 from parsers.vk_parser.user.format import UserInfoFormat
@@ -73,8 +74,19 @@ class UsersMainInfoParser(BaseParser):
         )
         self.user_ids = user_ids
 
-    def _check_constraints(self):
-        pass
+    def _check_constraints(self, user: dict) -> dict:
+        """
+        Try to convert user bdate
+
+        :param user:
+        :return:
+        """
+        if user.get('bdate', None):
+            try:
+                user['bdate'] = datetime.datetime.strptime(user['bdate'], '%d.%m.%Y').timestamp()
+            except Exception:
+                user['bdate'] = None
+        return user
 
     def parse_all(self) -> dict:
         """
@@ -89,6 +101,7 @@ class UsersMainInfoParser(BaseParser):
         )
         users_dict = {}
         for i, user in enumerate(users):
+            user = self._check_constraints(user)
             user['images'] = [user['photo_400_orig']]
             users_dict[user["id"]] = UserInfoFormat(**user).dict()
 

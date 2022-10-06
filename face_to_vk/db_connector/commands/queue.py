@@ -1,4 +1,4 @@
-from db_connector.singleton import CONN
+from db_connector.settings import CONN
 from db_connector.commands.base import BaseConnector
 
 
@@ -17,6 +17,7 @@ class QueueConnector(BaseConnector):
     def insert(cls, user_ids: list, uuid: str) -> None:
         """
         Insert user ids in table queue
+
         :param user_ids:
         :param uuid:
         :return:

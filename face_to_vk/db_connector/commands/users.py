@@ -1,6 +1,6 @@
 from typing import Optional, Union
 
-from db_connector.singleton import CONN
+from db_connector.settings import CONN
 from db_connector.commands.base import BaseConnector
 
 
@@ -16,6 +16,19 @@ class UsersConnector(BaseConnector):
         pass
 
     @classmethod
+    def check_exist_user_id(cls, user_id: int) -> bool:
+        """
+        Check exist user id in table
+
+        :param user_id:
+        :return:
+        >>> UsersConnector.check_exist_user_id(123)
+        """
+        with CONN.cursor() as cur:
+            cur.execute(f"SELECT id FROM {cls.TABLE_NAME} WHERE id = %s", (user_id,))
+            return cur.rowcount > 0
+
+    @classmethod
     def insert(
             cls,
             user_id: int,
@@ -28,6 +41,7 @@ class UsersConnector(BaseConnector):
     ):
         """
         Insert user info in table users
+
         :param user_id:
         :param can_access_closed:
         :param first_name:

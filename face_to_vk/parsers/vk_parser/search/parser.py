@@ -1,3 +1,5 @@
+from typing import Optional
+
 from parsers.vk_parser.search.format import SearchFormat
 from parsers.vk_parser.settings import PARSER_ALL
 from parsers.vk_parser.base import BaseParser
@@ -10,10 +12,12 @@ class SearchIdsParser(BaseParser):
 
     METHOD = 'users.search'
 
-    def __init__(
-            self,
-            **kwargs
-    ):
+    def __init__(self, **kwargs):
+        """
+        Available kwargs: 'q', 'sort', 'sex', 'country', 'city', 'home_town', 'university_country',
+        'age_from', 'age_to', 'online', 'has_photo', 'from_list'
+        """
+        # SearchFormat.__dict__
         self.params = SearchFormat(**kwargs).dict()
 
     def _check_constraints(self):

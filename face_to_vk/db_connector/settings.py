@@ -1,6 +1,7 @@
 import configparser
 import os
 
+import psycopg2
 
 DB_CONNECTOR_PATH = os.path.dirname(os.path.realpath(__file__))
 
@@ -25,6 +26,14 @@ PORT = db_cdf['port']
 USERNAME = db_cdf['username']
 PASSWORD = db_cdf['password']
 DBNAME = db_cdf['dbname']
+
+CONN = psycopg2.connect(
+    host=HOST,
+    port=PORT,
+    user=USERNAME,
+    password=PASSWORD,
+    dbname=DBNAME
+)
 
 
 status_cfg = cfg['status']

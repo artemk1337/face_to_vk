@@ -1,7 +1,6 @@
 from typing import Optional
 
-from db_connector.settings import STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH
-from db_connector.singleton import CONN
+from db_connector.settings import STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH, CONN
 
 
 class BaseConnector:
@@ -30,6 +29,7 @@ class BaseConnector:
     def _validate_status(cls, status: Optional[str]) -> None:
         """
         Validate status
+
         :param status: status
         """
         if status and status not in STATUS_SET:
@@ -46,6 +46,7 @@ class BaseConnector:
     def delete_rows_by_ids(cls, ids: list) -> None:
         """
         Delete rows by ids
+
         :param ids:
         :return:
         """
@@ -77,27 +78,31 @@ class BaseConnector:
             CONN.commit()
 
     @classmethod
-    def select_wait_row(cls, switch_status: Optional[str] = STATUS_BUSY) -> Optional[tuple]:
+    def select_wait_row(cls, limit: int = 1, switch_status: Optional[str] = STATUS_BUSY) -> Optional[tuple]:
         """
         Select one row with status 'wait'
+
+        :param limit: how many select
         :param switch_status: change status of extracted row on new
-        :return: SELECT_ROW_PARAMS for each class
+        :return: list with SELECT_ROW_PARAMS for each class
         """
         cls._validate_status(switch_status)
         with CONN.cursor() as cur:
             # select only one row
+            cur.execute("BEGIN")
             cur.execute(f"SELECT {cls.SELECT_ROW_PARAMS} FROM {cls.TABLE_NAME} WHERE status = '{STATUS_WAIT}' "
-                        f"ORDER BY created_time LIMIT 1")
+                        f"ORDER BY created_time LIMIT {limit}")
             rows = cur.fetchall()
             if not rows:
+                cur.execute("COMMIT")
                 return None
-            row = rows[0]
-            id_ = row[0]
+            ids = "(" + ', '.join([row[0] for row in rows]) + ")"
             if switch_status:
                 # update this one row
-                cur.execute(f"UPDATE {cls.TABLE_NAME} SET status = '{switch_status}' WHERE id = '{id_}'")
+                cur.execute(f"UPDATE {cls.TABLE_NAME} SET status = '{switch_status}' WHERE id IN {ids}")
                 CONN.commit()
-        return row
+            cur.execute("COMMIT")
+        return rows
 
     @classmethod
     def insert(cls, *args) -> None:
