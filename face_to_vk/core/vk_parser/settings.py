@@ -2,18 +2,18 @@ import configparser
 import vk_api
 import os
 
-from settings import TMP_DIR
+from settings import TMP_DIR, ROOT_PATH
 
 
-PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
+VK_PARSER_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 """ <===== CONFIG =====> """
 
 
-if os.path.exists(os.path.join(PLUGIN_PATH, 'vk_parser.conf')):
+if os.path.exists(os.path.join(ROOT_PATH, 'vk_parser.conf')):
     cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(PLUGIN_PATH, 'vk_parser.conf'))
+    cfg.read(os.path.join(ROOT_PATH, 'vk_parser.conf'))
 else:
     raise ImportError("Can't import 'vk_parser.conf'")
 
@@ -49,7 +49,7 @@ ITER_MAX_BUFFER = cfg['vk_parser']['iter_max_objects']
 # photo time
 PHOTO_MAX_SHIFT_TIME = int(cfg['vk_parser']['photo_max_shift_time'])
 
-# slow and fast parsers
+# slow and fast plugins
 PARSERS_ALL_DATA_SPEED = {
     'fast': VK_TOOLS.get_all,
     'slow': VK_TOOLS.get_all_slow,

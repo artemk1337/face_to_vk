@@ -1,8 +1,6 @@
-from typing import Optional
-
-from parsers.vk_parser.search.format import SearchFormat
-from parsers.vk_parser.settings import PARSER_ALL
-from parsers.vk_parser.base import BaseParser
+from core.vk_parser.search.format import SearchFormat
+from core.vk_parser.settings import PARSER_ALL
+from core.vk_parser.base import BaseParser
 
 
 class SearchIdsParser(BaseParser):

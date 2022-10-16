@@ -1,4 +1,4 @@
-from parsers.vk_parser.settings import VK_SESSION, VK_TOOLS, ITER_MAX_BUFFER, PHOTO_MAX_SHIFT_TIME, PARSER_ALL
+from core.vk_parser.settings import PARSER_ALL
 
 
 class CityTransformer:

@@ -1,15 +1,15 @@
 from typing import Union, Optional
 
-from parsers.vk_parser.user import UsersPhotosParser, UsersMainInfoParser
-from parsers.vk_parser.group import GroupIdsParser
-from parsers.vk_parser.search import SearchIdsParser
+from core.vk_parser.user import UsersPhotosParser, UsersMainInfoParser
+from core.vk_parser.group import GroupIdsParser
+from core.vk_parser.search import SearchIdsParser
 
 
 class ParseMethods:
     @staticmethod
     def parse_user_pages_with_images(ids: list, fields: Optional[Union[list, tuple, set]] = None) -> list:
         """
-        Parse user info from pages
+        Parse user info and images
         :return: return list with dicts
         >>> ParseMethods.parse_user_pages_with_images([1])
         """

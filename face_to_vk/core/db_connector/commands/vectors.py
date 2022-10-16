@@ -1,6 +1,6 @@
-from typing import Optional, Union
+from typing import Optional
 
-from db_connector.settings import CONN
+from core.db_connector.settings import CONN
 
 
 class VectorsConnector:

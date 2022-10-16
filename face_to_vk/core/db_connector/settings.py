@@ -3,15 +3,18 @@ import os
 
 import psycopg2
 
+from settings import ROOT_PATH
+
+
 DB_CONNECTOR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 """ <===== CONFIG =====> """
 
 
-if os.path.exists(os.path.join(DB_CONNECTOR_PATH, 'database.conf')):
+if os.path.exists(os.path.join(ROOT_PATH, 'database.conf')):
     cfg = configparser.ConfigParser()
-    cfg.read(os.path.join(DB_CONNECTOR_PATH, 'database.conf'))
+    cfg.read(os.path.join(ROOT_PATH, 'database.conf'))
 else:
     raise ImportError("Can't import 'database.conf'")
 

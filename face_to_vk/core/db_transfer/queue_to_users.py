@@ -1,8 +1,9 @@
 import time
 
-from parsers.vk_parser.parse import ParseMethods
-from db_connector.commands.queue import QueueConnector
-from db_connector.commands.users import UsersConnector
+from settings import LOGGER
+from core.vk_parser.parse import ParseMethods
+from core.db_connector.commands.queue import QueueConnector
+from core.db_connector.commands.users import UsersConnector
 
 
 def queue_to_users() -> bool:
@@ -12,16 +13,21 @@ def queue_to_users() -> bool:
     """
     status = False
 
+    LOGGER.info("Started check")
     # get rows
     rows = QueueConnector.select_wait_row(limit=10)
 
     # clean queue
     if not rows:
-        time.sleep(5)
+        seconds_sleep = 10
+        LOGGER.info(f"Sleep {seconds_sleep} seconds...")
+        time.sleep(seconds_sleep)
         return status
 
+    LOGGER.info(f"Processing rows...")
     # process each row
-    for row in rows:
+    for i, row in enumerate(rows):
+        LOGGER.info(f"Processing row {i}...")
         id_, user_id, my_uuid = row
 
         # parse if not exist in users
@@ -45,5 +51,6 @@ def queue_to_users() -> bool:
 
         # update status in queue
         QueueConnector.update_status_by_id(id_)
+    LOGGER.info(f"Precessed rows")
 
     return status

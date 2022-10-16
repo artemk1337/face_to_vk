@@ -4,6 +4,7 @@
 **data/
 **tmp/
 **.conf
+**pid.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

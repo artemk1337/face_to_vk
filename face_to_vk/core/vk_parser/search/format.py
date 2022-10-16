@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel as BaseFormat, validator, root_validator
 
-from parsers.vk_parser.utils.country_city_transformer import CountryTransformer, CityTransformer
+from core.vk_parser.utils.country_city_transformer import CountryTransformer, CityTransformer
 
 
 class SearchFormat(BaseFormat):

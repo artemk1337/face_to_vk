@@ -1,7 +1,7 @@
 import uuid
 
-from parsers.vk_parser.parse import ParseMethods
-from db_connector.commands.queue import QueueConnector
+from core.vk_parser import ParseMethods
+from core.db_connector.commands.queue import QueueConnector
 
 
 def vk_search_ids_to_queue(q: str, **kwargs):

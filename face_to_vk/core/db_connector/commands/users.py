@@ -1,7 +1,7 @@
-from typing import Optional, Union
+from typing import Optional
 
-from db_connector.settings import CONN
-from db_connector.commands.base import BaseConnector
+from core.db_connector.settings import CONN
+from core.db_connector.commands.base import BaseConnector
 
 
 class UsersConnector(BaseConnector):

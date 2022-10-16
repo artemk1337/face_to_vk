@@ -1,3 +1,3 @@
 [dirs]
-data_dir = data
 tmp_dir = tmp
+data_dir = tmp/data

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from db_connector.settings import STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH, CONN
+from core.db_connector.settings import STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH, CONN
 
 
 class BaseConnector:
