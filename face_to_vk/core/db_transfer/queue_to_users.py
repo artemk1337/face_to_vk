@@ -8,14 +8,15 @@ from core.db_connector.commands.users import UsersConnector
 
 def queue_to_users() -> bool:
     """
-
+    Transfer users from queue table to users table with parsed info from vk.
     :return: status: True or False
     """
     status = False
 
-    LOGGER.info("Started check")
+    LOGGER.info("Parsing 10 users...")
     # get rows
     rows = QueueConnector.select_wait_row(limit=10)
+    LOGGER.info("Success parsed")
 
     # clean queue
     if not rows:

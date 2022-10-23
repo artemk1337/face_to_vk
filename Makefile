@@ -11,8 +11,6 @@ venv:
 
 build: venv
 	cd docker && sudo docker-compose up -d  # or use sudo docker-compose -f docker/docker-compose.yaml ... up -d
-	# @mkdir -p data
 
 clean:
-	# rm -rf tmp
 	rm -rf venv

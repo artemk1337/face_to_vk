@@ -6,6 +6,9 @@ data_dir = tmp/data
 level = INFO
 filename = logs/face_to_vk.txt
 
+[queue_processor]
+sleep_seconds = 10
+
 ### DATABASE ###
 
 [database]
