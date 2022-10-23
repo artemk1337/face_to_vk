@@ -1,7 +1,7 @@
 import time
 
-from settings import LOGGER
-from core.vk_parser.parse import ParseMethods
+from settings import MAIN_LOGGER as LOGGER
+from core.vk_parser import VKParseMethods
 from core.db_connector.commands.queue import QueueConnector
 from core.db_connector.commands.users import UsersConnector
 
@@ -34,7 +34,7 @@ def queue_to_users() -> bool:
         if not UsersConnector.check_exist_user_id(user_id):
 
             # parse user
-            user_info: dict = ParseMethods.parse_user_pages_with_images([user_id])[0]
+            user_info: dict = VKParseMethods.parse_user_pages_with_images([user_id])[0]
 
             # insert in users
             UsersConnector.insert(

@@ -1,6 +1,4 @@
-import os
-
-from settings import ROOT_PATH, LOGGER
+from settings import MAIN_LOGGER as LOGGER
 from core.db_transfer.queue_to_users import queue_to_users
 
 

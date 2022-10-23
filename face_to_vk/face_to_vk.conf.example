@@ -1,3 +1,39 @@
 [dirs]
 tmp_dir = tmp
 data_dir = tmp/data
+
+[logger]
+level = INFO
+filename = logs/face_to_vk.txt
+
+### DATABASE ###
+
+[database]
+host = 127.0.0.1
+port = 5432
+username = admin
+password = admin
+dbname = face2vk
+
+[db_status]
+wait = wait
+busy = busy
+finish = finish
+
+### VK PARSER ###
+
+[vk_parser]
+iter_max_objects = 10000
+# 10 лет
+photo_max_shift_time = 157788000
+# 'fast' ot 'slow'
+speed_parser = fast
+
+[vk_auth_account]
+login = ''
+passowrd = ''
+
+[vk_auth_bot]
+id = ''
+secret_key = ''
+service_key = ''

@@ -1,5 +1,5 @@
-from core.vk_parser.settings import PARSER_ALL
 from core.vk_parser.base import BaseParser
+from ..vk_settings import VK_PARSER_ALL
 
 
 class GroupIdsParser(BaseParser):
@@ -21,7 +21,7 @@ class GroupIdsParser(BaseParser):
         :return: list with user ids, ex.: [123, 1234, ...]
         >>> GroupIdsParser(139105204).parse_all()
         """
-        users = PARSER_ALL(
+        users = VK_PARSER_ALL(
             self.METHOD,
             self.MAX_VALUE,
             values={'group_id': self.group_id, 'sort': 'id_asc'}

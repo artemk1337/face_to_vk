@@ -20,4 +20,5 @@ do
 done < "$PID_FILE"
 
 rm $PID_FILE
-echo "Finish"
+
+echo "Stopped"

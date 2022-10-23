@@ -4,7 +4,7 @@ from typing import Union, Optional
 
 from core.vk_parser.user.format import UserInfoFormat
 from core.vk_parser.base import BaseParser
-from core.vk_parser.settings import VK_SESSION, PHOTO_MAX_SHIFT_TIME
+from ..vk_settings import VK_SESSION, PHOTO_MAX_SHIFT_TIME
 
 
 class UsersPhotosParser(BaseParser):

@@ -1,5 +1,5 @@
-from core.db_connector.settings import CONN
 from core.db_connector.commands.base import BaseConnector
+from ..db_settings import CONN
 
 
 class QueueConnector(BaseConnector):

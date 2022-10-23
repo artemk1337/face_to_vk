@@ -1,6 +1,6 @@
 from typing import Optional
 
-from core.db_connector.settings import STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH, CONN
+from ..db_settings import DB_LOGGER as LOGGER, STATUS_SET, STATUS_WAIT, STATUS_BUSY, STATUS_FINISH, CONN
 
 
 class BaseConnector:
@@ -93,10 +93,11 @@ class BaseConnector:
             cur.execute(f"SELECT {cls.SELECT_ROW_PARAMS} FROM {cls.TABLE_NAME} WHERE status = '{STATUS_WAIT}' "
                         f"ORDER BY created_time LIMIT {limit}")
             rows = cur.fetchall()
+            LOGGER.info(str(rows))
             if not rows:
                 cur.execute("COMMIT")
                 return None
-            ids = "(" + ', '.join([row[0] for row in rows]) + ")"
+            ids = "(" + ', '.join([str(row[0]) for row in rows]) + ")"
             if switch_status:
                 # update this one row
                 cur.execute(f"UPDATE {cls.TABLE_NAME} SET status = '{switch_status}' WHERE id IN {ids}")

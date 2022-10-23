@@ -24,4 +24,4 @@ echo "$QUEUE_PROCESSOR_PID" >> $PID_FILE
 echo -e "queue_processor pid: $QUEUE_PROCESSOR_PID\n"
 
 
-echo "Finish"
+echo "Started"

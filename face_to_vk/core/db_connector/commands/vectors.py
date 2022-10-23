@@ -1,6 +1,6 @@
 from typing import Optional
 
-from core.db_connector.settings import CONN
+from ..db_settings import CONN
 
 
 class VectorsConnector:

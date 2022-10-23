@@ -1,6 +1,6 @@
 from core.vk_parser.search.format import SearchFormat
-from core.vk_parser.settings import PARSER_ALL
 from core.vk_parser.base import BaseParser
+from ..vk_settings import VK_PARSER_ALL
 
 
 class SearchIdsParser(BaseParser):
@@ -26,7 +26,7 @@ class SearchIdsParser(BaseParser):
         Parse all ids.
         :return: list with user ids, ex.: [123, 1234, ...]
         """
-        users_dict = PARSER_ALL(
+        users_dict = VK_PARSER_ALL(
             self.METHOD,
             self.MAX_VALUE,
             values=self.params

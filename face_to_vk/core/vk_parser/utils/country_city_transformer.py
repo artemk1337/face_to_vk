@@ -1,4 +1,4 @@
-from core.vk_parser.settings import PARSER_ALL
+from ..vk_settings import VK_PARSER_ALL
 
 
 class CityTransformer:
@@ -10,7 +10,7 @@ class CityTransformer:
         self.cities_with_id = None
 
     def get_all_cities_with_id(self) -> list:
-        self.cities_with_id: list = PARSER_ALL(
+        self.cities_with_id: list = VK_PARSER_ALL(
             self.METHOD_COUNTRY,
             1000,
             values={"country_id": self.country_id, "q": self.q},
@@ -31,7 +31,7 @@ class CountryTransformer:
 
     def get_all_countries_name_id(self):
         self.countries_dict = {}
-        countries: list = PARSER_ALL(
+        countries: list = VK_PARSER_ALL(
             self.METHOD_COUNTRY,
             1000,
         )['items']
