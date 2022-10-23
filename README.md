@@ -19,6 +19,14 @@ Use **Makefile**:
 make build
 ```
 
+### Create database
+
+Run command:
+
+```bash
+cd sql && ./create_db.sh
+```
+
 ### Preparing CUDA for ML (only NVidia GPUs)
 
 Install cudnn on Ubuntu:
