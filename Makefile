@@ -10,7 +10,7 @@ venv:
 	@venv/bin/pip install -r requirements.txt
 
 build: venv
-	cd docker && sudo docker-compose up -d  # or use sudo docker-compose -f docker/docker-compose.yaml ... up -d
+	cd docker && sudo docker compose up -d  # or use sudo docker compose -f docker/docker-compose.yaml ... up -d
 
 clean:
 	rm -rf venv

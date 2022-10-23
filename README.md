@@ -2,7 +2,7 @@
 
 ---
 
-### Requirement components
+## Requirement components
 
 - Ubuntu 20.04 LTS or later
 - Anaconda
