@@ -35,11 +35,17 @@ Install cudnn on Ubuntu:
 sudo apt install nvidia-cudnn
 ```
 
-Install other nvidia components for Tensorflow:
-
+- Install other nvidia components for ***Tensorflow***:
 ```bash
 conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
 mkdir -p $CONDA_PREFIX/etc/conda/activate.d
 echo 'export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/' > $CONDA_PREFIX/etc/conda/activate.d/env_vars.sh
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CONDA_PREFIX/lib/
+```
+
+**OR**
+
+- Install other nvidia components for ***Torch***:
+```bash
+conda install pytorch torchvision torchaudio cudatoolkit=11.6 -c pytorch -c conda-forge
 ```

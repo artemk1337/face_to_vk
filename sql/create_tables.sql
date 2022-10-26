@@ -1,9 +1,9 @@
 CREATE TYPE status AS ENUM ('wait', 'busy', 'finish');
 
 CREATE TABLE queue (
-    id serial NOT NULL PRIMARY KEY,
+    id bigserial NOT NULL PRIMARY KEY,
     created_time timestamp default current_timestamp,
-    user_id bigserial NOT NULL,
+    user_id bigint NOT NULL,
     uuid varchar(100) NOT NULL,
     status status NOT NULL DEFAULT 'wait'
 );
@@ -23,11 +23,11 @@ CREATE TABLE users (
 CREATE TABLE vectors (
     id bigserial NOT NULL PRIMARY KEY,
     created_time timestamp default current_timestamp,
-    user_id bigserial REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
+    user_id bigint REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,
     vector double precision[]
 );
 
 CREATE TABLE best_vectors (
-    user_id bigserial REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE PRIMARY KEY,
-    vector_id bigserial REFERENCES vectors(id) ON DELETE CASCADE ON UPDATE CASCADE
+    user_id bigint REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE PRIMARY KEY,
+    vector_id bigint REFERENCES vectors(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
