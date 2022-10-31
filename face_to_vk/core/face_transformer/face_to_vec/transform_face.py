@@ -25,4 +25,6 @@ if __name__ == "__main__":
         "QEXlCUZnqfYl6bVrT-B819Qk1vtimz29Lagnww/"
         "JuWBdTp9Jx4.jpg?size=2560x1920&quality=95&sign=531d83edab642e441ec55325d991ad29&type=album")
     faces = detector.detect(img)
+    print(len(faces), faces[0].shape)
     res = FaceTransformer.transform(faces[0])
+    print(res)

@@ -206,12 +206,18 @@ if __name__ == "__main__":
 
     torch_new_weights = transform_net(torch_pnet)
     tf_pnet = build_pnet(torch_new_weights)
+    tf_pnet.save_weights("pnet.h5")
+    tf_pnet.save("pnet")
 
     torch_new_weights = transform_net(torch_rnet)
     tf_rnet = build_rnet(torch_new_weights)
+    tf_rnet.save_weights("rnet.h5")
+    tf_rnet.save("rnet")
 
     torch_new_weights = transform_net(torch_onet)
     tf_onet = build_onet(torch_new_weights)
+    tf_onet.save_weights("onet.h5")
+    tf_onet.save("onet")
     # print()
     # for i, layer in enumerate(tf_rnet.layers):
     #     print(i, layer.name, tuple(sublayer.shape for sublayer in layer.weights))
