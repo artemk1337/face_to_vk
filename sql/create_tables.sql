@@ -31,3 +31,8 @@ CREATE TABLE best_vectors (
     user_id bigserial REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE PRIMARY KEY,
     vector_id bigserial REFERENCES vectors(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+CREATE TABLE id_users_bot (
+    id bigserial NOT NULL PRIMARY KEY,
+    user_tg_id integer NOT NULL
+);

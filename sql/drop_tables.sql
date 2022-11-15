@@ -2,3 +2,4 @@ DROP TABLE queue CASCADE;
 DROP TABLE best_vectors CASCADE;
 DROP TABLE vectors CASCADE;
 DROP TABLE users CASCADE;
+DROP TABLE id_users_bot CASCADE;``
