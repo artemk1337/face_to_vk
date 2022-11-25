@@ -8,7 +8,7 @@ import cv2
 
 class FaceDetector:
     FACE_DETECTOR = MTCNN()
-    TARGET_SIZE = (160, 160) or None
+    TARGET_SIZE = (160, 160)
 
     def __init__(self, confidence: float = 0.98):
         self.confidence = confidence
@@ -34,7 +34,6 @@ class FaceDetector:
         """
         Detect faces on img
 
-        :param resize_to_square:
         :param img: src image
         :return: list with RGB face arrays
         """
@@ -62,23 +61,16 @@ class FaceDetector:
 if __name__ == "__main__":
     from core.utils.download_img import download_img
     import tensorflow as tf
-    print(tf.config.list_physical_devices('GPU'))
+    import time
+
+    print(tf.test.is_gpu_available())
+
+    tm_start = time.time()
+
     detector = FaceDetector()
-    img = download_img(
-        "https://sun9-81.userapi.com/impg/"
-        "QEXlCUZnqfYl6bVrT-B819Qk1vtimz29Lagnww/"
-        "JuWBdTp9Jx4.jpg?size=2560x1920&quality=95&sign=531d83edab642e441ec55325d991ad29&type=album")
+    img = download_img("https://sun1-55.userapi.com/impf/c638631/v638631152/2999e/w2LNzjmVlf4.jpg?size=150x150&quality=96&sign=016171fd8dac67900de27138a230aeb3&type=album")
     faces = detector.detect(img)
     Image.fromarray(faces[0]).save("test1.png")
     print(len(faces), faces[0].shape)
-    img = download_img(
-        "https://sun9-81.userapi.com/impg/jJ3jt3ubUDaDAD3eTVwZVCco5h8HP6vYtAlcKA/"
-        "KrNgTeJI9kg.jpg?size=1620x2160&quality=95&sign=6e9062990a2e2c1ba60a7cd61de44218&type=album")
-    faces = detector.detect(img)
-    Image.fromarray(faces[0]).save("test2.png")
-    print(len(faces), faces[0].shape)
-    # faces = detector.detect(img)
-    # print(faces)
-    # faces = detector.detect(img)
-    # print(faces)
 
+    print(f"Seconds: {(time.time() - tm_start):.2f}")

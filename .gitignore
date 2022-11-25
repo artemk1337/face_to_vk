@@ -5,6 +5,7 @@
 **tmp/
 **.conf
 **pid.txt
+VGG-Face2/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
