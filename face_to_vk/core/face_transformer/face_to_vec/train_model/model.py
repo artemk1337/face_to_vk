@@ -1,5 +1,6 @@
 from torchvision.models.efficientnet import (
     efficientnet_v2_l, EfficientNet_V2_L_Weights,
+    efficientnet_v2_m, EfficientNet_V2_M_Weights,
     efficientnet_v2_s, EfficientNet_V2_S_Weights
 )
 from torchinfo import summary
@@ -17,7 +18,6 @@ from prepare_data import CustomDataLoader
 TRAIN_DIR, TEST_DIR = '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_train/train_processed_160', \
                       '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_160'
 
-
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -26,11 +26,12 @@ class Model:
         pass
 
     @staticmethod
-    def create(batch_size: int = 32):
-        model = efficientnet_v2_s(pretrained=True, weights=EfficientNet_V2_S_Weights.DEFAULT).to(device)
+    def create(batch_size: int = 32, output_size: int = 128):
+        model = efficientnet_v2_m().to(device)
         model.classifier = torch.nn.Sequential(
+            # torch.nn.Dropout(0.2),
             torch.nn.Linear(in_features=1280,
-                            out_features=128,
+                            out_features=output_size,
                             bias=True),
             torch.nn.Tanh(),
         ).to(device)
@@ -46,10 +47,9 @@ class Model:
 
 
 class TrainModel:
-
     # tensorboard --logdir=/home/artem/projects/face_to_vk/face_to_vk/core/face_transformer/face_to_vec/train_model/runs
     TENSORBOARD_LOG_DIR = None
-    TENSORBOARD_FLUSH_SECS = 10
+    TENSORBOARD_FLUSH_SECS = 15
 
     @classmethod
     def _create_data_loaders(cls, train_dir: str, test_dir: str = None):
@@ -72,10 +72,12 @@ class TrainModel:
 
         self.loss_fn = torch.nn.TripletMarginLoss(margin=1)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
+        # self.scheduler_optimizer = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        #     self.optimizer, mode='min', factor=0.75, patience=25)
 
-    def _calc_triplet_loss(self, anchor, positive, negative, bakward: bool = True):
+    def _calc_triplet_loss(self, anchor, positive, negative, backward: bool = True):
         loss = self.loss_fn(anchor, positive, negative)
-        if bakward:
+        if backward:
             loss.backward()
         return loss
 
@@ -94,14 +96,14 @@ class TrainModel:
     def _predict_and_calc_loss(self, batch_size: int):
         anchor, positive, negative = self.get_batch(self.train_data_loader, batch_size)
         anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
-        loss = self._calc_triplet_loss(anchor, positive, negative, bakward=True)
+        loss = self._calc_triplet_loss(anchor, positive, negative, backward=True)
         return loss
 
     def train(self, batch_size: int = 16, epochs: int = 1000, mini_batches: Optional[int] = 1):
         start_train_time = time.time()
 
         if self.async_mode:
-            self.train_data_loader.start_async_reader(batch_size=batch_size)
+            self.train_data_loader.start_async_reader(queue_size=5, batch_size=batch_size)
         if self.writer:
             self.writer.add_graph(self.model, self.get_batch(self.train_data_loader, batch_size=1)[0])
 
@@ -117,25 +119,45 @@ class TrainModel:
                 loss = self._predict_and_calc_loss(batch_size=batch_size)
                 epoch_losses += [loss.item()]
 
+            # step optimizer
             self.optimizer.step()
 
+            # calc loss
             mean_loss = sum(epoch_losses) / len(epoch_losses)
             total_losses += [mean_loss]
             if self.writer:
                 self.writer.add_scalar('Loss/train', mean_loss, epoch)
-            print(f"Epoch: {epoch}; Mean loss: {mean_loss}; Time epoch: {time.time() - time_epoch:.2f}")
+            print(f"Epoch: {epoch}; "
+                  f"Mean loss: {mean_loss}; "
+                  f"Time epoch: {time.time() - time_epoch:.2f}; "
+                  f"Optimizer step: {self.optimizer.param_groups[0]['lr']}")
 
+            # update step optimizer
+            # self.scheduler_optimizer.step(mean_loss)
+
+            # save model
+            if mean_loss == min(total_losses):
+                torch.save(self.model.state_dict(), "model")
+
+        # finish
         print(f"Total time: {time.time() - start_train_time:.2f} seconds.")
 
         self.train_data_loader.stop_async_reader()
 
 
 if __name__ == "__main__":
+    output_size = 256
+    epochs = 3000
+    batch_size = 16
+    mini_batches = 100
 
-    batch_size = 32
-
-    cnn_model = Model.create(batch_size=batch_size)
+    cnn_model = Model.create(batch_size=batch_size, output_size=output_size)
+    cnn_model.load_state_dict(torch.load("model"))
 
     train_model = TrainModel(model=cnn_model, train_dir=TRAIN_DIR, test_dir=TEST_DIR, async_mode=True)
-    train_model.create_tensorboard(comment="efficientnet_v2_s, output 128 units")
-    train_model.train(epochs=1000, mini_batches=50, batch_size=batch_size)
+    train_model.create_tensorboard(
+        comment=f" efficientnet_v2_m, pretrained false,"
+                f" output_size {output_size}, epochs {epochs}, batch_size {batch_size}, mini_batches {mini_batches}")
+    train_model.train(epochs=epochs, mini_batches=mini_batches, batch_size=batch_size)
+
+    # torch.save(cnn_model.state_dict(), "model")

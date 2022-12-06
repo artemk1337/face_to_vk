@@ -81,7 +81,7 @@ class CustomDataLoader:
         self.p = Process(target=self._put_batch_to_queue, args=(queue_size, batch_size,))
         self.p.daemon = True
         self.p.start()
-        print("Success started")
+        print("Success started async data loader")
 
     def stop_async_reader(self):
         """
@@ -94,7 +94,7 @@ class CustomDataLoader:
         self.queue.close()
         self.p = None
         self.queue = None
-        print("Success stopped")
+        print("Success stopped async data loader")
 
 
 if __name__ == "__main__":
