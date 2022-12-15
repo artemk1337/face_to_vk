@@ -6,6 +6,8 @@
 **.conf
 **pid.txt
 VGG-Face2/
+face_to_vk/core/face_transformer/face_to_vec/train_model/runs
+face_to_vk/core/face_transformer/face_to_vec/train_model/model
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -5,6 +5,7 @@ from torchvision.models.efficientnet import (
 )
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
+import torch.nn.functional as F
 import torch
 
 from tqdm import tqdm
@@ -14,9 +15,8 @@ from typing import Optional
 
 from prepare_data import CustomDataLoader
 
-
 TRAIN_DIR, TEST_DIR = '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_train/train_processed_160', \
-                      '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_160'
+    '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_160'
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -26,14 +26,18 @@ class Model:
         pass
 
     @staticmethod
-    def create(batch_size: int = 32, output_size: int = 128):
+    def create(batch_size: int = 32, output_size: int = 256, add_ctivation=False):
         model = efficientnet_v2_m().to(device)
         model.classifier = torch.nn.Sequential(
+            # torch.nn.Dropout(0.2),
+            # torch.nn.Linear(in_features=1280,
+            #                 out_features=512,
+            #                 bias=True),
             # torch.nn.Dropout(0.2),
             torch.nn.Linear(in_features=1280,
                             out_features=output_size,
                             bias=True),
-            torch.nn.Tanh(),
+            # torch.nn.Tanh(),
         ).to(device)
 
         summary(model=model,
@@ -44,6 +48,21 @@ class Model:
                 )
 
         return model
+
+
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, margin=2.0):
+        super(ContrastiveLoss, self).__init__()
+        self.margin = margin
+
+    def forward(self, output1, output2, label):
+        # Calculate the euclidean distance and calculate the contrastive loss
+        euclidean_distance = F.pairwise_distance(output1, output2, keepdim=True)  # 5
+
+        loss_contrastive = torch.mean((1 - label) * torch.pow(euclidean_distance, 2) +
+                                      (label) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
+
+        return loss_contrastive
 
 
 class TrainModel:
@@ -62,7 +81,8 @@ class TrainModel:
             model: torch.nn.Module,
             train_dir: str,
             test_dir: str,
-            async_mode: bool = True
+            async_mode: bool = True,
+            loss_fn_name: str = 'triplet',
     ):
         self.model = model
         self.train_data_loader, self.test_data_loader = self._create_data_loaders(train_dir, test_dir)
@@ -70,16 +90,28 @@ class TrainModel:
 
         self.writer: Optional[SummaryWriter] = None
 
-        self.loss_fn = torch.nn.TripletMarginLoss(margin=1)
+        self.loss_fn_name = loss_fn_name
+        self.triplet_loss = torch.nn.TripletMarginLoss(margin=1)
+        self.contrastive_loss = ContrastiveLoss(margin=1)
+
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
         # self.scheduler_optimizer = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #     self.optimizer, mode='min', factor=0.75, patience=25)
 
     def _calc_triplet_loss(self, anchor, positive, negative, backward: bool = True):
-        loss = self.loss_fn(anchor, positive, negative)
+        loss = self.triplet_loss(anchor, positive, negative)
         if backward:
             loss.backward()
         return loss
+
+    def _calc_contrastive_loss(self, anchor, positive, negative, backward: bool = True):
+        loss1 = self.contrastive_loss(anchor, positive, 0)
+        if backward:
+            loss1.backward()
+        loss2 = self.contrastive_loss(anchor, negative, 1)
+        if backward:
+            loss2.backward()
+        return loss1 + loss2
 
     def get_batch(self, data_loader: CustomDataLoader, batch_size: int):
         if self.async_mode and data_loader.queue:
@@ -96,7 +128,12 @@ class TrainModel:
     def _predict_and_calc_loss(self, batch_size: int):
         anchor, positive, negative = self.get_batch(self.train_data_loader, batch_size)
         anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
-        loss = self._calc_triplet_loss(anchor, positive, negative, backward=True)
+        if self.loss_fn_name == 'triplet':
+            loss = self._calc_triplet_loss(anchor, positive, negative, backward=True)
+        elif self.loss_fn_name == 'contrastive':
+            loss = self._calc_contrastive_loss(anchor, positive, negative, backward=True)
+        else:
+            raise
         return loss
 
     def train(self, batch_size: int = 16, epochs: int = 1000, mini_batches: Optional[int] = 1):
@@ -150,13 +187,14 @@ if __name__ == "__main__":
     epochs = 3000
     batch_size = 16
     mini_batches = 100
+    loss_fn_name = 'triplet'
 
     cnn_model = Model.create(batch_size=batch_size, output_size=output_size)
     cnn_model.load_state_dict(torch.load("model"))
 
     train_model = TrainModel(model=cnn_model, train_dir=TRAIN_DIR, test_dir=TEST_DIR, async_mode=True)
     train_model.create_tensorboard(
-        comment=f" efficientnet_v2_m, pretrained false,"
+        comment=f" efficientnet_v2_m, pretrained false, 1 linear layers, no activation, loss name {loss_fn_name},"
                 f" output_size {output_size}, epochs {epochs}, batch_size {batch_size}, mini_batches {mini_batches}")
     train_model.train(epochs=epochs, mini_batches=mini_batches, batch_size=batch_size)
 
