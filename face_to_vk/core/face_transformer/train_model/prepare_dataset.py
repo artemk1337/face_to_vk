@@ -11,7 +11,7 @@ np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
 class ProcessDataset:
     LOAD_IMAGE_SIZE = (250, 250)
-    IMAGE_SIZE = 160
+    IMAGE_SIZE = 250
 
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     print('Running on device: {}'.format(device))
@@ -67,6 +67,10 @@ class ProcessDataset:
 if __name__ == "__main__":
 
     ProcessDataset.process(
-        '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test',
+        '/VGG-Face2/data/vggface2_train/train',
+        f'/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_train/train_processed_{ProcessDataset.IMAGE_SIZE}'
+    )
+    ProcessDataset.process(
+        '/VGG-Face2/data/vggface2_test/test',
         f'/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_{ProcessDataset.IMAGE_SIZE}'
     )

@@ -98,7 +98,7 @@ class CustomDataLoader:
 
 
 if __name__ == "__main__":
-    data_loader = CustomDataLoader('/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_160')
+    data_loader = CustomDataLoader('/VGG-Face2/data/vggface2_test/test_processed_160')
 
     import time
     start_t = time.time()

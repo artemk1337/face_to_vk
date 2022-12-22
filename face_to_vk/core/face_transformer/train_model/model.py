@@ -172,9 +172,9 @@ class TrainModel:
             # update step optimizer
             # self.scheduler_optimizer.step(mean_loss)
 
-            # save model
+            # save model1.weights
             if mean_loss == min(total_losses):
-                torch.save(self.model.state_dict(), "model")
+                torch.save(self.model.state_dict(), "../model1.weights")
 
         # finish
         print(f"Total time: {time.time() - start_train_time:.2f} seconds.")
@@ -190,7 +190,7 @@ if __name__ == "__main__":
     loss_fn_name = 'triplet'
 
     cnn_model = Model.create(batch_size=batch_size, output_size=output_size)
-    cnn_model.load_state_dict(torch.load("model"))
+    cnn_model.load_state_dict(torch.load("../model1.weights"))
 
     train_model = TrainModel(model=cnn_model, train_dir=TRAIN_DIR, test_dir=TEST_DIR, async_mode=True)
     train_model.create_tensorboard(
@@ -198,4 +198,4 @@ if __name__ == "__main__":
                 f" output_size {output_size}, epochs {epochs}, batch_size {batch_size}, mini_batches {mini_batches}")
     train_model.train(epochs=epochs, mini_batches=mini_batches, batch_size=batch_size)
 
-    # torch.save(cnn_model.state_dict(), "model")
+    # torch.save(cnn_model.state_dict(), "model1.weights")
