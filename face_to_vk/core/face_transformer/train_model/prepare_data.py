@@ -8,6 +8,7 @@ from multiprocessing import Process, Queue
 from typing import Optional
 
 
+random.seed(42)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -76,7 +77,10 @@ class CustomDataLoader:
         if self.p is not None:
             return
 
-        torch.multiprocessing.set_start_method('spawn')
+        try:
+            torch.multiprocessing.set_start_method('spawn')
+        except RuntimeError:
+            pass
         self.queue = Queue()
         self.p = Process(target=self._put_batch_to_queue, args=(queue_size, batch_size,))
         self.p.daemon = True

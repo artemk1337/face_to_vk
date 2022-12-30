@@ -3,6 +3,12 @@ from torchvision.models.efficientnet import (
     efficientnet_v2_m, EfficientNet_V2_M_Weights,
     efficientnet_v2_s, EfficientNet_V2_S_Weights
 )
+from torchvision.models.mobilenetv3 import MobileNetV3
+from torchvision.models.resnet import resnet152
+from torchvision.models.resnet import wide_resnet101_2
+
+import timm
+
 from torchinfo import summary
 from torch.utils.tensorboard import SummaryWriter
 import torch.nn.functional as F
@@ -10,44 +16,18 @@ import torch
 
 from tqdm import tqdm
 import time
+import os
 
 from typing import Optional
 
-from prepare_data import CustomDataLoader
+from core.face_transformer.train_model.prepare_data import CustomDataLoader
+from core.face_transformer.models import *
+
 
 TRAIN_DIR, TEST_DIR = '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_train/train_processed_160', \
     '/home/artem/projects/face_to_vk/VGG-Face2/data/vggface2_test/test_processed_160'
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
-
-
-class Model:
-    def __init__(self):
-        pass
-
-    @staticmethod
-    def create(batch_size: int = 32, output_size: int = 256, add_ctivation=False):
-        model = efficientnet_v2_m().to(device)
-        model.classifier = torch.nn.Sequential(
-            # torch.nn.Dropout(0.2),
-            # torch.nn.Linear(in_features=1280,
-            #                 out_features=512,
-            #                 bias=True),
-            # torch.nn.Dropout(0.2),
-            torch.nn.Linear(in_features=1280,
-                            out_features=output_size,
-                            bias=True),
-            # torch.nn.Tanh(),
-        ).to(device)
-
-        summary(model=model,
-                input_size=(batch_size, 3, 160, 160),
-                col_names=["input_size", "output_size", "num_params", "trainable"],
-                col_width=20,
-                row_settings=["var_names"]
-                )
-
-        return model
 
 
 class ContrastiveLoss(torch.nn.Module):
@@ -66,6 +46,7 @@ class ContrastiveLoss(torch.nn.Module):
 
 
 class TrainModel:
+    MODEL_NAME = None
     # tensorboard --logdir=/home/artem/projects/face_to_vk/face_to_vk/core/face_transformer/face_to_vec/train_model/runs
     TENSORBOARD_LOG_DIR = None
     TENSORBOARD_FLUSH_SECS = 15
@@ -83,6 +64,8 @@ class TrainModel:
             test_dir: str,
             async_mode: bool = True,
             loss_fn_name: str = 'triplet',
+            lr: float = 0.001,
+            lr_scheduler: bool = False
     ):
         self.model = model
         self.train_data_loader, self.test_data_loader = self._create_data_loaders(train_dir, test_dir)
@@ -94,9 +77,11 @@ class TrainModel:
         self.triplet_loss = torch.nn.TripletMarginLoss(margin=1)
         self.contrastive_loss = ContrastiveLoss(margin=1)
 
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.001)
-        # self.scheduler_optimizer = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        #     self.optimizer, mode='min', factor=0.75, patience=25)
+        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.lr_scheduler = lr_scheduler
+        if lr_scheduler:
+            self.scheduler_optimizer = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                self.optimizer, mode='min', factor=0.75, patience=50)
 
     def _calc_triplet_loss(self, anchor, positive, negative, backward: bool = True):
         loss = self.triplet_loss(anchor, positive, negative)
@@ -104,34 +89,36 @@ class TrainModel:
             loss.backward()
         return loss
 
-    def _calc_contrastive_loss(self, anchor, positive, negative, backward: bool = True):
+    def _calc_contrastive_loss(self, anchor, positive, negative, backward: bool = True, norm_k: Optional[int] = None):
         loss1 = self.contrastive_loss(anchor, positive, 0)
-        if backward:
-            loss1.backward()
         loss2 = self.contrastive_loss(anchor, negative, 1)
+        total_loss = loss1 + loss2
+        if norm_k:
+            total_loss /= norm_k
         if backward:
-            loss2.backward()
-        return loss1 + loss2
+            total_loss.backward()
+
+        return total_loss
 
     def get_batch(self, data_loader: CustomDataLoader, batch_size: int):
         if self.async_mode and data_loader.queue:
             return data_loader.queue.get()
         return data_loader.create_triplet_batch(batch_size)
 
-    def create_tensorboard(self, comment: str = ""):
+    def create_tensorboard(self, comment: str = "", purge_step: Optional[int] = None):
         self.writer = SummaryWriter(log_dir=self.TENSORBOARD_LOG_DIR, comment=comment,
-                                    flush_secs=self.TENSORBOARD_FLUSH_SECS)
+                                    flush_secs=self.TENSORBOARD_FLUSH_SECS, purge_step=purge_step)
 
     def predict(self, data):
         return self.model(data)
 
-    def _predict_and_calc_loss(self, batch_size: int):
+    def _predict_and_calc_loss(self, batch_size: int, norm_k: Optional[int] = None):
         anchor, positive, negative = self.get_batch(self.train_data_loader, batch_size)
         anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
         if self.loss_fn_name == 'triplet':
             loss = self._calc_triplet_loss(anchor, positive, negative, backward=True)
         elif self.loss_fn_name == 'contrastive':
-            loss = self._calc_contrastive_loss(anchor, positive, negative, backward=True)
+            loss = self._calc_contrastive_loss(anchor, positive, negative, backward=True, norm_k=norm_k)
         else:
             raise
         return loss
@@ -153,14 +140,14 @@ class TrainModel:
             self.optimizer.zero_grad()
 
             for mini_batch in tqdm(range(mini_batches)):
-                loss = self._predict_and_calc_loss(batch_size=batch_size)
-                epoch_losses += [loss.item()]
+                loss = self._predict_and_calc_loss(batch_size=batch_size, norm_k=mini_batches)
+                epoch_losses += [loss.item()]  # normilized 1 / mini_batches
 
             # step optimizer
             self.optimizer.step()
 
             # calc loss
-            mean_loss = sum(epoch_losses) / len(epoch_losses)
+            mean_loss = sum(epoch_losses)
             total_losses += [mean_loss]
             if self.writer:
                 self.writer.add_scalar('Loss/train', mean_loss, epoch)
@@ -170,11 +157,12 @@ class TrainModel:
                   f"Optimizer step: {self.optimizer.param_groups[0]['lr']}")
 
             # update step optimizer
-            # self.scheduler_optimizer.step(mean_loss)
+            if self.lr_scheduler:
+                self.scheduler_optimizer.step(mean_loss)
 
-            # save model1.weights
+            # save best_model_eff_m.weights
             if mean_loss == min(total_losses):
-                torch.save(self.model.state_dict(), "../model1.weights")
+                torch.save(self.model.state_dict(), f"../{self.MODEL_NAME}.weights")
 
         # finish
         print(f"Total time: {time.time() - start_train_time:.2f} seconds.")
@@ -182,20 +170,42 @@ class TrainModel:
         self.train_data_loader.stop_async_reader()
 
 
-if __name__ == "__main__":
-    output_size = 256
-    epochs = 3000
-    batch_size = 16
-    mini_batches = 100
-    loss_fn_name = 'triplet'
+def train(model_name=None, model_class=None, loss_fn=None, lr=None):
+    output_size = 512
+    epochs = 5000
+    batch_size = 32
+    mini_batches = 50
+    loss_fn_name = loss_fn or 'contrastive'
+    preload_local_weights = False
+    pretrained = True
+    lr = lr or 0.0001
+    purge_step = None
 
-    cnn_model = Model.create(batch_size=batch_size, output_size=output_size)
-    cnn_model.load_state_dict(torch.load("../model1.weights"))
+    name = model_name or 'InceptionV3'
+    cnn_model = (model_class or InceptionV3).create(batch_size=batch_size, output_size=output_size, pretrained=pretrained)
+    weights_path = f"../{name}.weights"
+    if os.path.exists(weights_path):
+        preload_local_weights = True
+        cnn_model.load_state_dict(torch.load(weights_path))
 
-    train_model = TrainModel(model=cnn_model, train_dir=TRAIN_DIR, test_dir=TEST_DIR, async_mode=True)
+    TrainModel.MODEL_NAME = name
+    train_model = TrainModel(model=cnn_model, train_dir=TRAIN_DIR, test_dir=TEST_DIR, async_mode=True,
+                             loss_fn_name=loss_fn_name, lr=lr)
     train_model.create_tensorboard(
-        comment=f" efficientnet_v2_m, pretrained false, 1 linear layers, no activation, loss name {loss_fn_name},"
-                f" output_size {output_size}, epochs {epochs}, batch_size {batch_size}, mini_batches {mini_batches}")
+        comment=f" {name}, pretrained {pretrained}, 1 linear layers, no activation,"
+                f" loss name {loss_fn_name},"
+                f" output_size {output_size}, epochs {epochs}, batch_size {batch_size}, mini_batches {mini_batches},"
+                f" preload local weights {preload_local_weights}, lr {lr}", purge_step=purge_step)
     train_model.train(epochs=epochs, mini_batches=mini_batches, batch_size=batch_size)
 
-    # torch.save(cnn_model.state_dict(), "model1.weights")
+    # torch.save(cnn_model.state_dict(), "best_model_eff_m.weights")
+
+
+if __name__ == "__main__":
+    # for model_name, model_class in zip(
+    #         ('InceptionV3', 'InceptionV4', 'InceptionResnetV2'),
+    #         (InceptionV3, InceptionV4, InceptionResnetV2)
+    # ):
+    #     # for loss_fn in ('contrastive', 'triplet'):
+    #     train(model_name=model_name, model_class=model_class)
+    train(model_name='InceptionResnetV2', model_class=InceptionResnetV2, lr=0.001)

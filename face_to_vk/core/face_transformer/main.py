@@ -1,20 +1,21 @@
 from typing import Union
 from core.face_transformer.mtcnn import FaceDetector
 from core.face_transformer.face_to_vec import Face2VecModel
+from core.face_transformer.models import InceptionResnetV2
 
 
 class FaceTransformer:
 
     def __init__(self):
         self.mtcnn = FaceDetector()
-        self.model_face2vec = Face2VecModel().create().load_weights('model1.weights')
+        self.model_face2vec = Face2VecModel().\
+            create(batch_size=32, output_size=512, class_model=InceptionResnetV2).\
+            load_weights('inception_resnet_v2_512_0.867.weights')
 
     def transform(self, imgs):
-
         faces = self.mtcnn.detect(imgs)  # shape [batch_size, 3, 160, 160]
         vecs = self.model_face2vec.transform(faces)
         print(vecs)
-
         return vecs
 
 
