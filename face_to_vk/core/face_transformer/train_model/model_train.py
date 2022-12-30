@@ -1,11 +1,5 @@
-from torchvision.models.efficientnet import (
-    efficientnet_v2_l, EfficientNet_V2_L_Weights,
-    efficientnet_v2_m, EfficientNet_V2_M_Weights,
-    efficientnet_v2_s, EfficientNet_V2_S_Weights
-)
-from torchvision.models.mobilenetv3 import MobileNetV3
-from torchvision.models.resnet import resnet152
-from torchvision.models.resnet import wide_resnet101_2
+import numpy as np
+from sklearn.metrics import roc_auc_score, accuracy_score
 
 import timm
 
@@ -83,10 +77,12 @@ class TrainModel:
             self.scheduler_optimizer = torch.optim.lr_scheduler.ReduceLROnPlateau(
                 self.optimizer, mode='min', factor=0.75, patience=50)
 
-    def _calc_triplet_loss(self, anchor, positive, negative, backward: bool = True):
+    def _calc_triplet_loss(self, anchor, positive, negative, backward: bool = True, norm_k: Optional[int] = None):
         loss = self.triplet_loss(anchor, positive, negative)
         if backward:
             loss.backward()
+        if norm_k:
+            loss /= norm_k
         return loss
 
     def _calc_contrastive_loss(self, anchor, positive, negative, backward: bool = True, norm_k: Optional[int] = None):
@@ -112,22 +108,44 @@ class TrainModel:
     def predict(self, data):
         return self.model(data)
 
-    def _predict_and_calc_loss(self, batch_size: int, norm_k: Optional[int] = None):
+    def _predict_and_calc_loss_on_train(self, batch_size: int, norm_k: Optional[int] = None):
         anchor, positive, negative = self.get_batch(self.train_data_loader, batch_size)
         anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
         if self.loss_fn_name == 'triplet':
-            loss = self._calc_triplet_loss(anchor, positive, negative, backward=True)
+            loss = self._calc_triplet_loss(anchor, positive, negative, backward=True, norm_k=norm_k)
         elif self.loss_fn_name == 'contrastive':
             loss = self._calc_contrastive_loss(anchor, positive, negative, backward=True, norm_k=norm_k)
         else:
-            raise
+            raise ValueError("Not correct loss function name")
         return loss
+
+    def _predict_and_calc_score_on_test(self, batch_size: int, mini_batches: int = 1):
+        total_losses_pos = []
+        total_losses_neg = []
+
+        for mini_batch in range(mini_batches):
+            anchor, positive, negative = self.get_batch(self.test_data_loader, batch_size)
+            anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
+            euclidean_distance_pos = F.pairwise_distance(anchor, positive, keepdim=True).cpu().detach().numpy().squeeze()
+            euclidean_distance_neg = F.pairwise_distance(anchor, negative, keepdim=True).cpu().detach().numpy().squeeze()
+            euclidean_distance_pos: list = np.clip(euclidean_distance_pos, 0, 1).tolist()
+            euclidean_distance_neg: list = np.clip(euclidean_distance_neg, 0, 1).tolist()
+            total_losses_pos += euclidean_distance_pos
+            total_losses_neg += euclidean_distance_neg
+
+        total_targets = np.zeros(len(total_losses_pos)).tolist() + np.ones(len(total_losses_neg)).tolist()
+        total_losses = total_losses_pos + total_losses_neg
+
+        roc_auc = roc_auc_score(total_targets, total_losses, average='weighted')
+        acc = accuracy_score(total_targets, np.round(total_losses))
+        return acc, roc_auc
 
     def train(self, batch_size: int = 16, epochs: int = 1000, mini_batches: Optional[int] = 1):
         start_train_time = time.time()
 
         if self.async_mode:
             self.train_data_loader.start_async_reader(queue_size=5, batch_size=batch_size)
+            self.test_data_loader.start_async_reader(queue_size=2, batch_size=batch_size)
         if self.writer:
             self.writer.add_graph(self.model, self.get_batch(self.train_data_loader, batch_size=1)[0])
 
@@ -140,7 +158,7 @@ class TrainModel:
             self.optimizer.zero_grad()
 
             for mini_batch in tqdm(range(mini_batches)):
-                loss = self._predict_and_calc_loss(batch_size=batch_size, norm_k=mini_batches)
+                loss = self._predict_and_calc_loss_on_train(batch_size=batch_size, norm_k=mini_batches)
                 epoch_losses += [loss.item()]  # normilized 1 / mini_batches
 
             # step optimizer
@@ -149,12 +167,19 @@ class TrainModel:
             # calc loss
             mean_loss = sum(epoch_losses)
             total_losses += [mean_loss]
+
+            test_acc, test_auc_roc = self._predict_and_calc_score_on_test(
+                batch_size=batch_size,
+                mini_batches=max(mini_batches // 10, 1))
             if self.writer:
                 self.writer.add_scalar('Loss/train', mean_loss, epoch)
+                self.writer.add_scalar('test/accuracy', test_acc, epoch)
+                self.writer.add_scalar('test/auc-roc', test_auc_roc, epoch)
             print(f"Epoch: {epoch}; "
                   f"Mean loss: {mean_loss}; "
                   f"Time epoch: {time.time() - time_epoch:.2f}; "
-                  f"Optimizer step: {self.optimizer.param_groups[0]['lr']}")
+                  f"Optimizer step: {self.optimizer.param_groups[0]['lr']}; "
+                  f"Validation metrics: acc - {test_acc:.2f}, auc-roc - {test_auc_roc:.2f}")
 
             # update step optimizer
             if self.lr_scheduler:
@@ -170,16 +195,16 @@ class TrainModel:
         self.train_data_loader.stop_async_reader()
 
 
-def train(model_name=None, model_class=None, loss_fn=None, lr=None):
+def train(model_name=None, model_class=None, loss_fn=None, lr=None, purge_step=None):
     output_size = 512
     epochs = 5000
     batch_size = 32
-    mini_batches = 50
+    mini_batches = 100
     loss_fn_name = loss_fn or 'contrastive'
     preload_local_weights = False
     pretrained = True
     lr = lr or 0.0001
-    purge_step = None
+    purge_step = purge_step or None
 
     name = model_name or 'InceptionV3'
     cnn_model = (model_class or InceptionV3).create(batch_size=batch_size, output_size=output_size, pretrained=pretrained)
@@ -208,4 +233,4 @@ if __name__ == "__main__":
     # ):
     #     # for loss_fn in ('contrastive', 'triplet'):
     #     train(model_name=model_name, model_class=model_class)
-    train(model_name='InceptionResnetV2', model_class=InceptionResnetV2, lr=0.001)
+    train(model_name='InceptionResnetV2', model_class=InceptionResnetV2, lr=0.001, loss_fn='triplet')
