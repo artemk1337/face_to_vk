@@ -8,7 +8,7 @@ from multiprocessing import Process, Queue
 from typing import Optional
 
 
-random.seed(42)
+# random.seed(42)
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 

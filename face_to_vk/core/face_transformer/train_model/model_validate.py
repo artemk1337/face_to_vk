@@ -31,9 +31,11 @@ class ValidateModel:
             model: torch.nn.Module,
             test_dir: str,
             async_mode: bool = True,
+            margin: int = 1,
     ):
         self.model = model
         self.test_data_loader = self._create_data_loader(test_dir)
+        self.margin = margin
         self.async_mode = async_mode
 
     def get_batch(self, data_loader: CustomDataLoader, batch_size: int):
@@ -47,8 +49,8 @@ class ValidateModel:
     def _predict_and_calc_loss(self, batch_size: int) -> (list, list):
         anchor, positive, negative = self.get_batch(self.test_data_loader, batch_size)
         anchor, positive, negative = self.predict(anchor), self.predict(positive), self.predict(negative)
-        euclidean_distance_pos = F.pairwise_distance(anchor, positive, keepdim=True).cpu().detach().numpy().squeeze()
-        euclidean_distance_neg = F.pairwise_distance(anchor, negative, keepdim=True).cpu().detach().numpy().squeeze()
+        euclidean_distance_pos = F.pairwise_distance(anchor, positive, keepdim=True).cpu().detach().numpy().squeeze() / self.margin
+        euclidean_distance_neg = F.pairwise_distance(anchor, negative, keepdim=True).cpu().detach().numpy().squeeze() / self.margin
         euclidean_distance_pos: list = np.clip(euclidean_distance_pos, 0, 1).tolist()
         euclidean_distance_neg: list = np.clip(euclidean_distance_neg, 0, 1).tolist()
         return euclidean_distance_pos, euclidean_distance_neg
@@ -57,7 +59,7 @@ class ValidateModel:
         start_test_time = time.time()
 
         if self.async_mode:
-            self.test_data_loader.start_async_reader(queue_size=5, batch_size=batch_size)
+            self.test_data_loader.start_async_reader(queue_size=10, batch_size=batch_size)
 
         total_losses = []
         total_targets = []
@@ -81,13 +83,14 @@ class ValidateModel:
 if __name__ == "__main__":
     output_size = 512
     epochs = 10
-    batch_size = 8
-    mini_batches = 20
+    batch_size = 32
+    mini_batches = 30
+    margin = 2
 
     cnn_model = InceptionResnetV2.create(batch_size=batch_size, output_size=output_size)
-    weights_path = f"../inception_resnet_v2_512_0.867.weights"
+    weights_path = f"../InceptionResnetV2_512_0.73_margin-2.weights"
     if os.path.exists(weights_path):
         cnn_model.load_state_dict(torch.load(weights_path))
 
-    train_model = ValidateModel(model=cnn_model, test_dir=TEST_DIR, async_mode=True)
+    train_model = ValidateModel(model=cnn_model, test_dir=TEST_DIR, async_mode=True, margin=margin)
     train_model.validate(epochs=epochs, mini_batches=mini_batches, batch_size=batch_size)
