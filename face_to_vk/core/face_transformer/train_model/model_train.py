@@ -230,7 +230,7 @@ class TrainModel:
         self.train_data_loader.stop_async_reader()
 
 
-def train(model_name=None, model_class=None, loss_fn=None, lr=None, purge_step=None):
+def train(model_name=None, model_class=None, loss_fn=None, lr=None, purge_step=None, margin: int = 1):
     output_size = 512
     epochs = 10000
     batch_size = 32
@@ -241,7 +241,7 @@ def train(model_name=None, model_class=None, loss_fn=None, lr=None, purge_step=N
     lr = lr or 0.0001
     purge_step = purge_step or None
     lr_scheduler = False
-    margin = 2
+    margin = margin
 
     name = model_name or 'InceptionV3'
     cnn_model = (model_class or InceptionV3).create(batch_size=batch_size, output_size=output_size, pretrained=pretrained)
@@ -272,4 +272,4 @@ if __name__ == "__main__":
     #     # for loss_fn in ('contrastive', 'triplet'):
     #     train(model_name=model_name, model_class=model_class)
     train(model_name='InceptionResnetV2', model_class=InceptionResnetV2, lr=0.0001,
-          loss_fn='contrastive_huber')
+          loss_fn='contrastive', margin=3)

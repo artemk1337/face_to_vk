@@ -75,8 +75,8 @@ class ValidateModel:
                 total_targets += np.ones(len(neg_prob)).tolist()
 
         print(f'\nResults on {int(epochs*mini_batches*batch_size)} samples')
-        print(roc_auc_score(total_targets, total_losses, average='weighted'))
-        print(accuracy_score(total_targets, np.round(total_losses)))
+        print("Auc-roc:", roc_auc_score(total_targets, total_losses, average='weighted'))
+        print("Acc:", accuracy_score(total_targets, np.round(total_losses)))
         self.test_data_loader.stop_async_reader()
 
 
@@ -85,10 +85,10 @@ if __name__ == "__main__":
     epochs = 10
     batch_size = 32
     mini_batches = 30
-    margin = 2
+    margin = 3
 
     cnn_model = InceptionResnetV2.create(batch_size=batch_size, output_size=output_size)
-    weights_path = f"../InceptionResnetV2_512_0.73_margin-2.weights"
+    weights_path = f"../InceptionResnetV2.weights"
     if os.path.exists(weights_path):
         cnn_model.load_state_dict(torch.load(weights_path))
 
